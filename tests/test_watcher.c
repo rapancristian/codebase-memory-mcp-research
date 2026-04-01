@@ -371,7 +371,8 @@ TEST(watcher_detects_new_file) {
 
 TEST(watcher_detects_branch_switch) {
     /* Create a temporary git repo with two branches */
-    char tmpdir[256]; snprintf(tmpdir, sizeof(tmpdir), "/tmp/cbm_watcher_branch_XXXXXX");
+    char tmpdir[256];
+    snprintf(tmpdir, sizeof(tmpdir), "/tmp/cbm_watcher_branch_XXXXXX");
     if (!cbm_mkdtemp(tmpdir))
         SKIP("cbm_mkdtemp failed");
 
