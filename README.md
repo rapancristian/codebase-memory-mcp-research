@@ -100,6 +100,8 @@ codebase-memory-mcp config set auto_index true
 
 When enabled, new projects are indexed automatically on first connection. Previously-indexed projects are registered with the background watcher for ongoing git-based change detection. Configurable file limit: `config set auto_index_limit 50000`.
 
+For a parent directory that contains multiple repositories, each repository is indexed as its own project (based on the repository path/name). Index each repo once (or let `auto_index` do it on first connect), then branch switches (`git checkout ...`) are detected as HEAD movement and automatically trigger reindex via the watcher.
+
 ### Keeping Up to Date
 
 ```bash
@@ -369,6 +371,7 @@ SQLite databases stored at `~/.cache/codebase-memory-mcp/`. Persists across rest
 | `index_repository` fails | Pass absolute path: `index_repository(repo_path="/absolute/path")` |
 | `trace_call_path` returns 0 results | Use `search_graph(name_pattern=".*PartialName.*")` first to find the exact name. |
 | Queries return wrong project results | Add `project="name"` parameter. Use `list_projects` to see names. |
+| Parent folder has multiple repos and I switch branches often | Index each repository once (`index_repository` per repo path, or enable `auto_index`). After that, the watcher tracks each repo independently and branch switches are auto-detected/reindexed. |
 | Binary not found after install | Add to PATH: `export PATH="$HOME/.local/bin:$PATH"` |
 | UI not loading | Ensure you downloaded the `ui` variant and ran `--ui=true`. Check `http://localhost:9749`. |
 
