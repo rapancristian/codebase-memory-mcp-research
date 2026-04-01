@@ -369,6 +369,52 @@ TEST(watcher_detects_new_file) {
     PASS();
 }
 
+TEST(watcher_detects_branch_switch) {
+    /* Create a temporary git repo with two branches */
+    char tmpdir[256];
+    snprintf(tmpdir, sizeof(tmpdir), "/tmp/cbm_watcher_branch_XXXXXX");
+    if (!cbm_mkdtemp(tmpdir))
+        SKIP("cbm_mkdtemp failed");
+
+    char cmd[768];
+    snprintf(cmd, sizeof(cmd),
+             "cd '%s' && git init -q && git config user.email test@test && "
+             "git config user.name test && "
+             "echo 'base' > file.txt && git add file.txt && git commit -q -m 'init' && "
+             "git checkout -q -b feature && "
+             "echo 'feature' > feature.txt && git add feature.txt && git commit -q -m 'feature' && "
+             "git checkout -q master 2>/dev/null || git checkout -q main",
+             tmpdir);
+    if (system(cmd) != 0) {
+        snprintf(cmd, sizeof(cmd), "rm -rf '%s'", tmpdir);
+        system(cmd);
+        SKIP("git not available");
+    }
+
+    cbm_store_t *store = cbm_store_open_memory();
+    cbm_watcher_t *w = cbm_watcher_new(store, index_callback, NULL);
+
+    cbm_watcher_watch(w, "branch-repo", tmpdir);
+    index_call_count = 0;
+
+    /* Baseline on main/master */
+    cbm_watcher_poll_once(w);
+    ASSERT_EQ(index_call_count, 0);
+
+    /* Switch branch -> HEAD changes -> should trigger reindex */
+    snprintf(cmd, sizeof(cmd), "cd '%s' && git checkout -q feature", tmpdir);
+    system(cmd);
+    cbm_watcher_touch(w, "branch-repo");
+    cbm_watcher_poll_once(w);
+    ASSERT_EQ(index_call_count, 1);
+
+    cbm_watcher_free(w);
+    cbm_store_close(store);
+    snprintf(cmd, sizeof(cmd), "rm -rf '%s'", tmpdir);
+    system(cmd);
+    PASS();
+}
+
 TEST(watcher_no_change_no_reindex) {
     /* Create a temporary git repo */
     char tmpdir[256]; snprintf(tmpdir, sizeof(tmpdir), "/tmp/cbm_watcher_nochg_XXXXXX");
@@ -1567,6 +1613,7 @@ SUITE(watcher) {
     RUN_TEST(watcher_detects_git_commit);
     RUN_TEST(watcher_detects_dirty_worktree);
     RUN_TEST(watcher_detects_new_file);
+    RUN_TEST(watcher_detects_branch_switch);
     RUN_TEST(watcher_no_change_no_reindex);
     RUN_TEST(watcher_multiple_projects);
 
